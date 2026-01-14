@@ -1,7 +1,5 @@
 # LDoc, a Lua Documentation Tool
 
-@lookup manual.md
-
 ## Introduction
 
 LDoc is a software documentation tool which automatically generates API documentation out of source code comments (doc comments).
@@ -93,7 +91,7 @@ Here are all the tags known to LDoc:
   * **@type** a section which describes a class
   * **@within** puts the function or table into an implicit section
   * **@fixme**, **@todo** and **@warning** are _annotations_, which are doc comments that
-  occur inside a function body.
+    occur inside a function body.
 
 The first important tag to know is the module tag:
 
@@ -1190,7 +1188,7 @@ _These only appear in the configuration file:_
     ```lua
     -- define a @callback tag:
     custom_tags = { { 'callback', hidden = true } }
-
+    
     -- show a label beside functions tagged with @callback.
     custom_display_name_handler = function(item, default_handler)
     if item.type == 'function' and item.tags.callback then
@@ -1367,5 +1365,4 @@ The internal naming is not always so consistent; `ret` corresponds to **@return*
 `item.params` is an array of the function parameters, in order; it is also a map from these names to the individual descriptions of the parameters.
 `item.modifiers` is a table where the keys are the tags and the values are arrays of modifier tables.
 The standard tag aliases `tparam` and `treturn` attach a `type` modifier to their tags.
-
 
