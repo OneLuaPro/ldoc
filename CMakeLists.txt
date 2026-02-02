@@ -74,11 +74,11 @@ endif()
 
 # ------------------------------------------------------------------------------
 # Project defintion
-project(ldoc)
+project(ldoc CXX)
 
 # ------------------------------------------------------------------------------
 # Other settings
-set(CMAKE_VERBOSE_MAKEFILE OFF)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 # ldoc has nothing to build, only some files to install
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY TRUE)
 
@@ -96,12 +96,35 @@ set(INSTALL_TOP_LDIR
   ${INSTALL_DATAROOTDIR}/lua/${liblua_VERSION_MAJOR}.${liblua_VERSION_MINOR})
 
 # ------------------------------------------------------------------------------
+# ldoc Launcher (.exe instead of .bat)
+if(WIN32)
+  add_executable(LDocLauncher
+    logo/lua-logo-olp-dist.rc
+    ldoc.cpp)
+
+  # Header-path
+  target_include_directories(LDocLauncher PRIVATE ${LIBLUA_INCLUDEDIR})
+
+  # Linker settings
+  target_link_directories(LDocLauncher PRIVATE ${LIBLUA_LIBDIR})
+  
+  # Link against libs
+  target_link_libraries(LDocLauncher PRIVATE liblua.lib pathcch.lib)
+
+  # Output-Name
+  set_target_properties(LDocLauncher PROPERTIES OUTPUT_NAME "ldoc")
+
+  # Install to INSTALL_BINDIR
+  install(TARGETS LDocLauncher RUNTIME DESTINATION ${INSTALL_BINDIR})
+endif()
+
+# ------------------------------------------------------------------------------
 # Install ldoc files and docs
 install(PROGRAMS ldoc.lua DESTINATION ${INSTALL_BINDIR})
-if(WIN32)
-  # *.bat-launcher for Windows
-  install(FILES ldoc.bat DESTINATION ${INSTALL_BINDIR})
-endif()
+# if(WIN32)
+#   # *.bat-launcher for Windows (currently not used)
+#   install(FILES ldoc.bat DESTINATION ${INSTALL_BINDIR})
+# endif()
 install(FILES ldoc.lua DESTINATION ${INSTALL_TOP_LDIR})
 install(DIRECTORY ldoc DESTINATION ${INSTALL_TOP_LDIR})
 install(FILES run-tests.lua manual.html DESTINATION ${INSTALL_DOCDIR})
