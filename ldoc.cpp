@@ -1,6 +1,44 @@
-//
-// ldoc launcher
-//
+/**
+ * @file ldoc.cpp
+ * @brief Standalone executable launcher for the LDoc documentation tool.
+ * 
+ * This launcher embeds the main 'ldoc.lua' script as a hex-encoded byte array 
+ * (generated via CMake) to eliminate the need for an external script file in the 
+ * binary directory. 
+ * 
+ * Key Features:
+ * - Portable Execution: Resolves the installation prefix dynamically relative
+ *   to the EXE location.
+ * - Environment Setup: Automatically configures Lua's 'package.path' and
+ *   'package.cpath' using a custom C++/Lua bridge to find shared libraries and
+ *   modules in the system-independent 'share' and 'lib' directories.
+ * - Encoding Safety: Uses UTF-8 conversion for Windows WideChar paths to ensure 
+ *   compatibility with the Lua interpreter.
+ *
+ * -----------------------------------------------------------------------------
+ * MIT License
+ * 
+ * Copyright (c) 2026 The OneLuaPro project authors
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ * -----------------------------------------------------------------------------
+ */
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -12,6 +50,7 @@
 #include <vector>
 
 #include <lua.hpp>
+#include "ldoc_source.h"
 
 #define appName "ldoc.exe"
 
@@ -120,14 +159,15 @@ int main(int argc, char** argv) {
   }
   // Lua state now fully initialized with all standard search paths
 
-  // Path to script called by this launcher
-  std::string scriptPath = utf8Prefix + "\\bin\\ldoc.lua";
-
-  // Run script
-  if (luaL_dofile(L, scriptPath.c_str()) != 0) {
-    fprintf(stderr, "%s: Error: %s\n", appName, lua_tostring(L, -1));
-    lua_close(L);
-    return 1;
+  // Use loadbuffer, because it works with byte-arrays ans sizes
+  if (luaL_loadbuffer(L, (const char*)ldoc_source_bytes, ldoc_source_size, "@ldoc.lua") == LUA_OK) {
+    // Execute the chunk
+    if (lua_pcall(L, 0, LUA_MULTRET, 0) != LUA_OK) {
+      fprintf(stderr, "%s: Runtime error: %s\n", appName, lua_tostring(L, -1));
+    }
+  }
+  else {
+    fprintf(stderr, "%s: Syntax error in embedded code: %s\n", appName, lua_tostring(L, -1));
   }
 
   lua_close(L);

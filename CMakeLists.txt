@@ -98,33 +98,59 @@ set(INSTALL_TOP_LDIR
 # ------------------------------------------------------------------------------
 # ldoc Launcher (.exe instead of .bat)
 if(WIN32)
+
+  # Define absolute paths for the input Lua script and the generated C++ header
+  set(LDOC_INPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/ldoc.lua")
+  set(LDOC_HEADER_FILE "${CMAKE_CURRENT_BINARY_DIR}/generated/ldoc_source.h")
+
+  # Define the generation rule: Converts the Lua script into a C-style hex array.
+  # This avoids encoding issues and delimiter conflicts in C++ string literals.
+  # Ensure the header is rebuilt if the Lua script or the converter script changes
+  # VERBATIM ensures correct argument escaping for the Windows Shell/MSBuild
+  add_custom_command(
+    OUTPUT "${LDOC_HEADER_FILE}"
+    COMMAND ${CMAKE_COMMAND} 
+    -DINPUT_FILE=${LDOC_INPUT_FILE}
+    -DOUTPUT_FILE=${LDOC_HEADER_FILE} 
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/convert_lua_to_hex.cmake"
+    DEPENDS "${LDOC_INPUT_FILE}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/convert_lua_to_hex.cmake"
+    COMMENT "Converting ldoc.lua to hex header..."
+    VERBATIM
+  )
+
+  # Define the executable target
   add_executable(LDocLauncher
-    logo/lua-logo-olp-dist.rc
-    ldoc.cpp)
+    logo/lua-logo-olp-dist.rc # Windows resource file (icon/metadata)
+    ldoc.cpp                  # Main C++ launcher logic
+    "${LDOC_HEADER_FILE}"     # Listing the header here makes it visible to MSBuild's dependency scanner
+  )
 
-  # Header-path
+  # Mark the file as generated so CMake doesn't look for it during the initial configuration
+  set_source_files_properties("${LDOC_HEADER_FILE}" PROPERTIES GENERATED TRUE)
+
+  # Crucial for MSVC/MSBuild: Tells the compiler that ldoc.cpp MUST be recompiled 
+  # whenever ldoc_source.h is updated. This bridges the gap between the custom command and the C++ build.
+  set_source_files_properties(ldoc.cpp PROPERTIES OBJECT_DEPENDS "${LDOC_HEADER_FILE}")
+
+  # Include directories: ensure the compiler finds both Lua headers and our generated hex header
   target_include_directories(LDocLauncher PRIVATE ${LIBLUA_INCLUDEDIR})
+  target_include_directories(LDocLauncher PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
-  # Linker settings
+  # Linker: Set path for the Lua library
   target_link_directories(LDocLauncher PRIVATE ${LIBLUA_LIBDIR})
   
-  # Link against libs
+  # Link dependencies: liblua for the interpreter and pathcch for Windows path handling
   target_link_libraries(LDocLauncher PRIVATE liblua.lib pathcch.lib)
 
-  # Output-Name
+  # Rename the final binary to 'ldoc.exe' (default would be LDocLauncher.exe)
   set_target_properties(LDocLauncher PROPERTIES OUTPUT_NAME "ldoc")
 
-  # Install to INSTALL_BINDIR
+  # Define the installation rule for the resulting binary
   install(TARGETS LDocLauncher RUNTIME DESTINATION ${INSTALL_BINDIR})
 endif()
 
 # ------------------------------------------------------------------------------
 # Install ldoc files and docs
-install(PROGRAMS ldoc.lua DESTINATION ${INSTALL_BINDIR})
-# if(WIN32)
-#   # *.bat-launcher for Windows (currently not used)
-#   install(FILES ldoc.bat DESTINATION ${INSTALL_BINDIR})
-# endif()
 install(FILES ldoc.lua DESTINATION ${INSTALL_TOP_LDIR})
 install(DIRECTORY ldoc DESTINATION ${INSTALL_TOP_LDIR})
 install(FILES run-tests.lua manual.html DESTINATION ${INSTALL_DOCDIR})
