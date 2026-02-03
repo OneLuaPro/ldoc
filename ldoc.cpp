@@ -64,18 +64,27 @@ static std::string WideCharToUTF8(LPCWSTR text) {
 }
 
 static const char *setPaths = R"(
-function setPaths(basePath,paths,cpaths)
-   local cleanBasePath = basePath:gsub("\\+$", "")
-   local fullPaths = {}
-   for _,v in ipairs(paths) do
-      table.insert(fullPaths,cleanBasePath.."\\"..((v:gsub("^\\+", "")):gsub("\\+$", "")))
+function setPaths(basePath, paths, cpaths)
+   local cleanBase = basePath:gsub("\\+$", "")
+   local function process(list)
+      local result = {}
+      local isRelative = false
+      for _, v in ipairs(list) do
+	 if v == "<RELATIVE>" then
+	    isRelative = true
+	 else
+	    local entry = v:gsub("^\\+", ""):gsub("\\+$", "")
+	    if isRelative then
+	       table.insert(result, entry)
+	    else
+	       table.insert(result, cleanBase .. "\\" .. entry)
+	    end
+	 end
+      end
+      return table.concat(result, ";")
    end
-   package.path = table.concat(fullPaths,";")
-   local fullCpaths = {}
-   for _,v in ipairs(cpaths) do
-      table.insert(fullCpaths,cleanBasePath.."\\"..((v:gsub("^\\+", "")):gsub("\\+$", "")))
-   end
-   package.cpath = table.concat(fullCpaths,";")
+   package.path = process(paths)
+   package.cpath = process(cpaths)
 end
 )";
 
@@ -86,17 +95,19 @@ static const char* LUA_PATHS[] = {
   R"(bin\?\init.lua)",
   "share\\lua\\" LUA_VERSION_MAJOR "." LUA_VERSION_MINOR "\\?.lua",
   "share\\lua\\" LUA_VERSION_MAJOR "." LUA_VERSION_MINOR "\\?\\init.lua",
+  "<RELATIVE>",		// Sentinel, relative paths from here
   R"(.\?.lua)",
   R"(.\?\init.lua)",
-  NULL
+  NULL			// End of List
 };
 
 static const char* LUA_CPATHS[] = {
   R"(bin\?.dll)",
   "lib\\lua\\" LUA_VERSION_MAJOR "." LUA_VERSION_MINOR "\\?.dll",
   R"(bin\loadall.dll)",
+  "<RELATIVE>",		// Sentinel, relative paths from here
   R"(.\?.dll)",
-  NULL
+  NULL			// End of List
 };
 
 int main(int argc, char** argv) {
