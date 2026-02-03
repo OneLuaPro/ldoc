@@ -79,8 +79,6 @@ project(ldoc CXX)
 # ------------------------------------------------------------------------------
 # Other settings
 set(CMAKE_VERBOSE_MAKEFILE ON)
-# ldoc has nothing to build, only some files to install
-set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY TRUE)
 
 # ------------------------------------------------------------------------------
 # Setup GNU-alike installatin directories
