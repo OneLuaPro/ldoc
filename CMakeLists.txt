@@ -122,6 +122,7 @@ if(WIN32)
   # Define the executable target
   add_executable(LDocLauncher
     logo/lua-logo-olp-dist.rc # Windows resource file (icon/metadata)
+    logo/lua-olp.manifest     # UTF-8 activeCodePage manifest
     ldoc.cpp                  # Main C++ launcher logic
     "${LDOC_HEADER_FILE}"     # Listing the header here makes it visible to MSBuild's dependency scanner
   )
